@@ -288,7 +288,7 @@ func (r resourceAwsSecretAccessKey) Delete(ctx context.Context, req tfsdk.Delete
 // - The Vault AWS secret engine is configured with an access key ID
 // - The AWS IAM user has a single access key configured, identical to the one in Vault
 //
-// If all checks succeed, we will also perform a access key rotation before finishing the import
+// If all checks succeed, we will also perform an access key rotation before finishing the import
 func (r resourceAwsSecretAccessKey) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	idParts := strings.Split(req.ID, ":")
 

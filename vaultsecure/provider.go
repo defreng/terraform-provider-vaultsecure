@@ -3,7 +3,6 @@ package vaultsecure
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -26,10 +25,6 @@ type provider struct {
 func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
-			"region": {
-				Type:     types.StringType,
-				Optional: true,
-			},
 			"vault_address": {
 				Type:     types.StringType,
 				Optional: true,
@@ -44,7 +39,6 @@ func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 
 // Provider schema struct
 type providerData struct {
-	Region         types.String `tfsdk:"region"`
 	VaultAddress   types.String `tfsdk:"vault_address"`
 	VaultNamespace types.String `tfsdk:"vault_namespace"`
 }
@@ -59,21 +53,8 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	}
 
 	// Load AWS Configuration
-	if config.Region.Unknown {
-		resp.Diagnostics.AddError(
-			"Unable to create AWS client",
-			"Cannot use an unknown value as region",
-		)
-		return
-	}
-
-	var err error
-	var cfg aws.Config
-	if config.Region.Null {
-		cfg, err = awsConfig.LoadDefaultConfig(ctx)
-	} else {
-		cfg, err = awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(config.Region.Value))
-	}
+	// ... as we only access global AWS services (IAM, STS), we don't care about the region
+	cfg, err := awsConfig.LoadDefaultConfig(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create AWS configuration",
