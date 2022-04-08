@@ -161,6 +161,10 @@ func (r resourceAwsSecretAccessKey) Create(ctx context.Context, req tfsdk.Create
 		return
 	}
 
+	tflog.Info(ctx, "Created AWS access key", map[string]interface{}{
+		"access_key_id": state.AwsAccessKeyID.Value,
+	})
+
 	// Set Access Key in AWS Secret Engine
 	secretEngineData := map[string]interface{}{
 		"access_key": *key.AccessKey.AccessKeyId,
@@ -172,9 +176,6 @@ func (r resourceAwsSecretAccessKey) Create(ctx context.Context, req tfsdk.Create
 		resp.Diagnostics.AddError("Error writing access key to the AWS backend", err.Error())
 		return
 	}
-	tflog.Info(ctx, "AWS access key id before rotation", map[string]interface{}{
-		"access_key_id": *key.AccessKey.AccessKeyId,
-	})
 
 	// Rotate the access key using the Vault API
 	// We need to retry this, as IAM might take a few seconds to become consistent
@@ -200,6 +201,12 @@ func (r resourceAwsSecretAccessKey) Create(ctx context.Context, req tfsdk.Create
 		return
 	}
 	state.AwsAccessKeyID = types.String{Value: vResp.Data["access_key"].(string)}
+	tflog.Info(ctx, "Rotated AWS access key", map[string]interface{}{
+		"access_key_id": state.AwsAccessKeyID.Value,
+	})
+
+	// sleep for 10 seconds to ensure IAM reached consistency for the new access key
+	time.Sleep(10 * time.Second)
 
 	err = r.refreshState(ctx, &state)
 	if err != nil {
@@ -215,19 +222,52 @@ func (r resourceAwsSecretAccessKey) Create(ctx context.Context, req tfsdk.Create
 }
 
 func (r resourceAwsSecretAccessKey) refreshState(ctx context.Context, state *AwsSecretAccessKey) error {
-	// Find the Access Key in AWS and refresh its creation date
-	creationDate, err := getAwsAccessKeyCreationDate(ctx, r.p.iam, state.AwsIamUsername.Value, state.AwsAccessKeyID.Value)
-	if err != nil {
-		return err
-	}
-	state.AwsAccessKeyCreationDate = types.String{Value: creationDate.Format(time.RFC3339)}
-
 	// Refresh the access key ID that is configured in the vault engine
 	vRead, err := r.p.vault.Logical().Read(fmt.Sprintf("%s/config/root", state.VaultEnginePath.Value))
 	if err != nil {
 		return err
 	}
 	state.VaultAccessKeyID = types.String{Value: vRead.Data["access_key"].(string)}
+
+	// Find the Access Key in AWS and refresh its creation date
+	creationDate, err := getAwsAccessKeyCreationDate(ctx, r.p.iam, state.AwsIamUsername.Value, state.AwsAccessKeyID.Value)
+	if errors.Is(err, ErrAccessKeyNotFound) && !state.VaultAccessKeyID.Equal(state.AwsAccessKeyID) {
+		// If the access key was removed from AWS and Vault was set to a different access key ID,
+		// it might mean that someone rotate the key in Vault. That is OK - and we will check if we can take ownership
+		// of the new access key in AWS.
+
+		// Let's check if the Access Key ID configured in Vault exists and is the only one
+		creationDate, err = getAwsAccessKeyCreationDate(ctx, r.p.iam, state.AwsIamUsername.Value, state.VaultAccessKeyID.Value)
+		if errors.Is(err, ErrAccessKeyNotFound) {
+			// If the access key does not exist, we can't take ownership of it
+			return ErrAccessKeyNotFound
+		}
+		if err != nil {
+			return err
+		}
+
+		exactlyOneAccessKey, err := hasExactlyOneAccessKey(ctx, r.p.iam, state.AwsIamUsername.Value)
+		if err != nil {
+			return err
+		}
+		if !exactlyOneAccessKey {
+			return fmt.Errorf("the AWS access key (ID: %s) that was created by this resource no longer exists."+
+				" A different access key was configured in Vault (ID: %s) - and that access key ID seems to"+
+				" exist in IAM. But as it is not the only access key for the IAM user (%s), this resource"+
+				" does not support taking ownership of it (it's not a valid configuration for Vault as it"+
+				" would break future usage of the rotate-root functionality)",
+				state.AwsAccessKeyID.Value, state.VaultAccessKeyID.Value, state.AwsIamUsername.Value)
+		}
+
+		// TODO: To be really secure, would be great if we trigger a key rotation in this case
+		state.AwsAccessKeyID.Value = state.VaultAccessKeyID.Value
+		tflog.Info(ctx, "The AWS access key apparently was rotated externally. Taking ownership of the new one", map[string]interface{}{
+			"access_key_id": state.AwsAccessKeyID.Value,
+		})
+	} else if err != nil {
+		return err
+	}
+	state.AwsAccessKeyCreationDate = types.String{Value: creationDate.Format(time.RFC3339)}
 
 	return nil
 }
@@ -376,4 +416,13 @@ func getAwsAccessKeyCreationDate(ctx context.Context, iamClient *iam.Client, use
 	}
 
 	return nil, ErrAccessKeyNotFound
+}
+
+func hasExactlyOneAccessKey(ctx context.Context, iamClient *iam.Client, username string) (bool, error) {
+	keys, err := iamClient.ListAccessKeys(ctx, &iam.ListAccessKeysInput{UserName: aws.String(username)})
+	if err != nil {
+		return false, err
+	}
+
+	return len(keys.AccessKeyMetadata) == 1, nil
 }
