@@ -1,5 +1,6 @@
 .idea/
 dist/
+tests/terraform/.terraform
 examples/.terraform
 examples/.terraform.lock.hcl
 examples/terraform.tfstate*
