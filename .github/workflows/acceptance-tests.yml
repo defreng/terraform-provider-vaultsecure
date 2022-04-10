@@ -1,7 +1,7 @@
 name: pr-acceptance-tests
 
 #on:
-#  pull_request_target:
+#  pull_request:
 #    paths-ignore:
 #      - 'docs/**'
 #      - 'examples/**'
@@ -17,11 +17,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Configure
+        run: |
+          source .github/generated.env
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
       - name: AWS identity
         run: |
           aws sts get-caller-identity
