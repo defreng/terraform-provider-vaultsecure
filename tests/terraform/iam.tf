@@ -95,7 +95,7 @@ resource "aws_iam_policy" "testuser_boundary" {
         "iam:DeleteAccessKey",
         "iam:GetUser"
       ],
-      "Resource": "arn:aws:iam::${data.aws_caller_identity.this.account_id}:user/$${aws.username}"
+      "Resource": "arn:aws:iam::${data.aws_caller_identity.this.account_id}:user/$${aws:username}"
     }
   ]
 }
