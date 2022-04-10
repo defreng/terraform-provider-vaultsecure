@@ -28,7 +28,7 @@ resource "aws_iam_role" "github_ci" {
       "Condition": {
         "ForAllValues:StringLike": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:defreng/${local.github_repository}:*"
+          "token.actions.githubusercontent.com:sub": "repo:${local.github_owner}/${local.github_repository}:*"
         }
       }
     }

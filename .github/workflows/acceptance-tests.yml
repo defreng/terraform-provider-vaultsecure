@@ -9,7 +9,7 @@ name: pr-acceptance-tests
 on: push
 
 permissions:
-  id-token: write  # required for
+  id-token: write  # required for aws-actions/configure-aws-credentials@v1
 
 jobs:
   tests:
@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '>=1.17.0'
       - name: Configure
         run: |
           ./.github/generated.env
@@ -25,6 +28,4 @@ jobs:
         with:
           role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
-      - name: AWS identity
-        run: |
-          aws sts get-caller-identity
+      - run: cd tests && make tests

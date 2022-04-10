@@ -4,10 +4,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 4.9"
     }
-    github = {
-      source  = "integrations/github"
-      version = "~> 4.23"
-    }
     local = {
       source = "hashicorp/local"
       version = "~> 2.2"
@@ -21,6 +17,11 @@ terraform {
       name = "vaultsecure"
     }
   }
+}
+
+locals {
+  github_owner = "defreng"
+  github_repository = "terraform-provider-vaultsecure"
 }
 
 provider "aws" {
