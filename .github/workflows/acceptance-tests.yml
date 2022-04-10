@@ -1,12 +1,11 @@
 name: pr-acceptance-tests
 
-#on:
-#  pull_request:
-#    paths-ignore:
-#      - 'docs/**'
-#      - 'examples/**'
-#      - '*.md'
-on: push
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'examples/**'
+      - '*.md'
 
 permissions:
   id-token: write  # required for aws-actions/configure-aws-credentials@v1
