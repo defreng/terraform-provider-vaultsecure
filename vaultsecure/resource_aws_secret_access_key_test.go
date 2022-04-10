@@ -83,12 +83,25 @@ func TestAccResourceAwsSecretAccessKeyType_basic(t *testing.T) {
 // has a policy attached which allows to rotate its own access keys
 func testAccCreateIAMUser(t *testing.T) string {
 	ctx := context.Background()
-	iamUsername := addRandomSuffix("test-user")
+
+	iamUsernamePrefix, exists := os.LookupEnv("TF_ACC_IAM_USER_NAME_PREFIX")
+	if !exists {
+		iamUsernamePrefix = "test-user"
+	}
+	iamUsername := addRandomSuffix(iamUsernamePrefix)
 
 	// Create the IAM user
-	user, err := testIAMClient.CreateUser(ctx, &iam.CreateUserInput{
+	createUserInput := iam.CreateUserInput{
 		UserName: aws.String(iamUsername),
-	})
+	}
+	// Check if we need to create the IAM user with a permissions boundary
+	// ... this is especially needed when running the acceptance tests in the GitHub CI
+	iamPermissionsBoundaryArn := os.Getenv("TF_ACC_IAM_USER_PERMISSIONS_BOUNDARY_ARN")
+	if iamPermissionsBoundaryArn != "" {
+		createUserInput.PermissionsBoundary = aws.String(iamPermissionsBoundaryArn)
+	}
+
+	user, err := testIAMClient.CreateUser(ctx, &createUserInput)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -27,10 +27,7 @@ provider "vaultsecure" {
 
 ## Schema
 
-### Required
-
-- **vault_address** (String) The URL of the Vault server (e.g. `https://myvaultserver.com:8200`)
-
 ### Optional
 
-- **vault_namespace** (String, Optional) Vault namespace that should be used (defaults to `null`)
+- **vault_address** (String, Optional) The URL of the Vault server (defaults to `https://127.0.0.1:8200`), can also be set via the `VAULT_ADDR` environment variable.
+- **vault_namespace** (String, Optional) Vault namespace that should be used (defaults to `null`), can also be set via the `VAULT_NAMESPACE` environment variable.
