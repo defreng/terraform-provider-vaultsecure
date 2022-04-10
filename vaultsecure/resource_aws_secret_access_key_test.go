@@ -83,7 +83,12 @@ func TestAccResourceAwsSecretAccessKeyType_basic(t *testing.T) {
 // has a policy attached which allows to rotate its own access keys
 func testAccCreateIAMUser(t *testing.T) string {
 	ctx := context.Background()
-	iamUsername := addRandomSuffix("test-user")
+
+	iamUsernamePrefix, exists := os.LookupEnv("TF_ACC_IAM_USER_NAME_PREFIX")
+	if !exists {
+		iamUsernamePrefix = "test-user"
+	}
+	iamUsername := addRandomSuffix(iamUsernamePrefix)
 
 	// Create the IAM user
 	user, err := testIAMClient.CreateUser(ctx, &iam.CreateUserInput{

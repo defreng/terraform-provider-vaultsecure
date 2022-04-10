@@ -8,7 +8,7 @@ resource "local_file" "github_ci_configuration" {
 echo AWS_REGION="${data.aws_region.current.name}" >> $GITHUB_ENV
 echo AWS_ROLE_TO_ASSUME="${aws_iam_role.github_ci.arn}" >> $GITHUB_ENV
 
-echo AWS_TESTUSER_NAME_PREFIX="${local.testuser_name_prefix}" >> $GITHUB_ENV
-echo AWS_TESTUSER_PERMISSIONS_BOUNDARY_ARN="${aws_iam_policy.testuser_boundary.arn}" >> $GITHUB_ENV
+echo TF_ACC_IAM_USER_NAME_PREFIX="${local.testuser_name_prefix}" >> $GITHUB_ENV
+echo TF_ACC_IAM_USER_PERMISSIONS_BOUNDARY_ARN="${aws_iam_policy.testuser_boundary.arn}" >> $GITHUB_ENV
 EOF
 }
