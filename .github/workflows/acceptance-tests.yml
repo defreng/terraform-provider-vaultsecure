@@ -1,0 +1,27 @@
+name: pr-acceptance-tests
+
+#on:
+#  pull_request_target:
+#    paths-ignore:
+#      - 'docs/**'
+#      - 'examples/**'
+#      - '*.md'
+on: push
+
+permissions:
+  id-token: write  # required for
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: AWS identity
+        run: |
+          aws sts get-caller-identity
